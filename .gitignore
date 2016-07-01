@@ -1,0 +1,10 @@
+*.root
+*.log*
+*.pdf
+
+*.swp
+*.swo
+
+.*
+
+old
