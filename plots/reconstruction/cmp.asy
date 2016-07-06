@@ -3,10 +3,10 @@ import pad_layout;
 
 string topDir = "../../";
 
-string datasets[] = { "EE", "EB" };
+string datasets[] = { "EE", "EB", "EB2" };
 
-xSizeDef = 8cm;
-ySizeDef = 6cm;
+xSizeDef = 10cm;
+ySizeDef = 8cm;
 
 //xTicksDef = LeftTicks(100., 50.);
 
@@ -27,7 +27,7 @@ for (string dataset : datasets)
 	NewPad("$\xi$");
 	draw(RootGetObject(f, "h_xi_L"), "vl", blue, "left arm");
 	draw(RootGetObject(f, "h_xi_R"), "vl", red, "right arm");
-	limits((0, 0), (0.25, 3));
+	xlimits(0, 0.25, Crop);
 
 	AttachLegend();
 }
@@ -40,7 +40,7 @@ for (string dataset : datasets)
 	
 	NewPad("$m_{RP}\ung{GeV}$");
 	draw(RootGetObject(f, "h_m"), "vl", magenta);
-	limits((0, 0), (2000, 4));
+	xlimits(0, 2000, Crop);
 
 	//AttachLegend();
 }
@@ -56,4 +56,21 @@ for (string dataset : datasets)
 	limits((0, 0), (2000, 2000));
 
 	//AttachLegend();
+}
+
+NewRow();
+
+for (string dataset : datasets)
+{
+	string f = topDir+dataset+"/distributions.root";
+
+	NewPad("diphoton mass$\ung{GeV}$");
+
+	RootGetObject(f, "h_dp_mass");
+	draw(robj, "vl", blue, format("diphoton cut (%.0f events)", robj.rExec("GetEntries")));
+
+	RootGetObject(f, "h_dp_mass_tr_both_arms");
+	draw(robj, "vl", red, format("diphoton cut, RP tracks L \& R (%.0f events)", robj.rExec("GetEntries")));
+	
+	AttachLegend();
 }
