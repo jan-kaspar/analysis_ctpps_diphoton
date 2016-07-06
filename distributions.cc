@@ -129,15 +129,15 @@ int main()
 
 	TH1D *h_xi_L = new TH1D("h_xi_L", ";#xi_{L}", 25, 0., 0.25);
 	TH1D *h_xi_R = new TH1D("h_xi_R", ";#xi_{R}", 25, 0., 0.25);
-	TH1D *h_m = new TH1D("h_m", ";mass   (GeV)", 20, 0., 2000.);
+	TH1D *h_m = new TH1D("h_m", ";mass	 (GeV)", 20, 0., 2000.);
 
 	TGraph *g_m_RP_vs_m_CMS = new TGraph(); g_m_RP_vs_m_CMS->SetName("g_m_RP_vs_m_CMS"); g_m_RP_vs_m_CMS->SetTitle(";m_{CMS};m_{RP}");
 
 	// init counters
-    unsigned int N=0;
-    unsigned int N_L_any=0, N_L_one=0, N_L_two=0;
-    unsigned int N_R_any=0, N_R_one=0, N_R_two=0;
-    unsigned int N_LR=0;
+	unsigned int N=0;
+	unsigned int N_L_any=0, N_L_one=0, N_L_two=0;
+	unsigned int N_R_any=0, N_R_one=0, N_R_two=0;
+	unsigned int N_LR=0;
 
 	// before looping
 	printf("run, event, 45-F, 45-N, 56-N, 56-F\n");
@@ -156,38 +156,38 @@ int main()
 	
 		for (const auto &ds : *tracks)
 		{
-		  for (const auto &t : ds)
-		  {
-		    if (t.isValid())
-		    {
-		      tr[ds.detId()] = true;
-		    }
-		  }
+			for (const auto &t : ds)
+			{
+				if (t.isValid())
+				{
+					tr[ds.detId()] = true;
+				}
+			}
 		}
 		
 		printf("%u, %llu, %i, %i, %i, %i\n", event.id().run(), event.id().event(),
-		    tr[3], tr[2], tr[102], tr[103]
-		  );
+				tr[3], tr[2], tr[102], tr[103]
+			);
 	
 		N++;
 	
 		if (tr[2] || tr[3])
-		  N_L_any++;
+			N_L_any++;
 		if ( (tr[2] || tr[3]) && !(tr[2] && tr[3]))
-		  N_L_one++;
+			N_L_one++;
 		if (tr[2] && tr[3])
-		  N_L_two++;
+			N_L_two++;
 	
 		if (tr[102] || tr[103])
-		  N_R_any++;
+			N_R_any++;
 		if ( (tr[102] || tr[103]) && !(tr[102] && tr[103]))
-		  N_R_one++;
+			N_R_one++;
 		if (tr[102] && tr[103])
-		  N_R_two++;
+			N_R_two++;
 	
 		bool track_both_arms = (tr[2] || tr[3]) && (tr[102] || tr[103]);
 		if (track_both_arms)
-		  N_LR++;
+			N_LR++;
 
 		// get event info
 		EventKey ek{event.id().run(), event.id().event()};
