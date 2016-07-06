@@ -2,6 +2,7 @@
 
 #include "TFile.h"
 #include "TH1D.h"
+#include "TGraph.h"
 
 #include "DataFormats/FWLite/interface/Handle.h"
 #include "DataFormats/FWLite/interface/ChainEvent.h"
@@ -90,6 +91,22 @@ void LoadEventInfo(const string &fn)
 }
 
 //----------------------------------------------------------------------------------------------------
+
+struct TrackData
+{
+	bool valid = false;
+	double x = 0.;
+	double y = 0.;
+
+	void operator= (const TotemRPLocalTrack &ft)
+	{
+		valid = ft.isValid();
+		x = ft.getX0();
+		y = ft.getY0();
+	}
+};
+
+//----------------------------------------------------------------------------------------------------
 //----------------------------------------------------------------------------------------------------
 
 int main()
@@ -109,6 +126,12 @@ int main()
 	// book histograms
 	TH1D *h_dp_mass = new TH1D("h_dp_mass", ";diphoton mass", 20, 500., 1200.);
 	TH1D *h_dp_mass_tr_both_arms = new TH1D("h_dp_mass_tr_both_arms", ";diphoton mass", 20, 500., 1200.);
+
+	TH1D *h_xi_L = new TH1D("h_xi_L", ";#xi_{L}", 25, 0., 0.25);
+	TH1D *h_xi_R = new TH1D("h_xi_R", ";#xi_{R}", 25, 0., 0.25);
+	TH1D *h_m = new TH1D("h_m", ";mass   (GeV)", 20, 0., 2000.);
+
+	TGraph *g_m_RP_vs_m_CMS = new TGraph(); g_m_RP_vs_m_CMS->SetName("g_m_RP_vs_m_CMS"); g_m_RP_vs_m_CMS->SetTitle(";m_{CMS};m_{RP}");
 
 	// init counters
     unsigned int N=0;
@@ -178,6 +201,76 @@ int main()
 			if (track_both_arms)
 				h_dp_mass_tr_both_arms->Fill(ei.dp_mass);
 		}
+
+		// get track data for horizontal RPs
+		TrackData tr_L_1_F;
+		TrackData tr_L_1_N;
+		TrackData tr_R_1_N;
+		TrackData tr_R_1_F;
+
+		for (const auto &ds : *tracks)
+		{
+			const auto &rpId = ds.detId();
+
+			for (const auto &t : ds)
+			{
+				if (rpId == 3)
+					tr_L_1_F = t;
+				if (rpId == 2)
+					tr_L_1_N = t;
+				if (rpId == 102)
+					tr_R_1_N = t;
+				if (rpId == 103)
+					tr_R_1_F = t;
+			}
+		}
+
+		// alignment corrections
+		double de_x_L_1_F, de_x_L_1_N, de_x_R_1_N, de_x_R_1_F;	// in mm
+		if (event.id().run() < 274244)
+		{
+			de_x_L_1_F = -3.40;
+			de_x_L_1_N = -0.90;
+			de_x_R_1_N = -2.75;
+			de_x_R_1_F = -2.40;
+		} else {
+			de_x_L_1_F = -3.90;
+			de_x_L_1_N = -1.45;
+			de_x_R_1_N = -3.25;
+			de_x_R_1_F = -2.85;
+		}
+
+		// optics
+		double D_L_1_F = 9.22E-02;	// in m
+		double D_L_1_N = 9.26E-02;
+		double D_R_1_N = 5.81E-02;
+		double D_R_1_F = 5.16E-02;
+
+		// simple proton reconstruction
+		if (tr_L_1_F.valid && tr_R_1_F.valid)
+		{
+			double x_L_1_F = tr_L_1_F.x + de_x_L_1_F;
+			double x_R_1_F = tr_R_1_F.x + de_x_R_1_F;
+
+			double xi_L_1_F = x_L_1_F*1E-3 / D_L_1_F;
+			double xi_R_1_F = x_R_1_F*1E-3 / D_R_1_F;
+
+			double W = 13000.;	// sqrt(s) in GeV
+			double m = W * sqrt(xi_L_1_F * xi_R_1_F);
+
+			h_xi_L->Fill(xi_L_1_F);
+			h_xi_R->Fill(xi_R_1_F);
+
+			h_m->Fill(m);
+		
+			if (it != eventInfo.end())
+			{
+				const auto &ei = it->second;
+
+				int idx = g_m_RP_vs_m_CMS->GetN();
+				g_m_RP_vs_m_CMS->SetPoint(idx, ei.dp_mass, m);
+			}
+		}
 	}
 
 	// print counters
@@ -207,6 +300,12 @@ int main()
 
 	h_dp_mass->Write();
 	h_dp_mass_tr_both_arms->Write();
+
+	h_xi_L->Write();
+	h_xi_R->Write();
+	h_m->Write();
+
+	g_m_RP_vs_m_CMS->Write();
 
 	// clean up
 	delete f_out;
