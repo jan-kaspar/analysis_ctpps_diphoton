@@ -47,12 +47,15 @@ for (string dataset : datasets)
 
 NewRow();
 
+TGraph_errorBar = None;
+
 for (string dataset : datasets)
 {
 	string f = topDir+dataset+"/distributions.root";
 	
 	NewPad("$m_{CMS}\ung{GeV}$", "$m_{RP}\ung{GeV}$");
-	draw(RootGetObject(f, "g_m_RP_vs_m_CMS"), "p", heavygreen, mCi+2pt+heavygreen);
+	draw((0, 0)--(2000, 2000), dotted);
+	draw(RootGetObject(f, "g_m_RP_vs_m_CMS"), "p", heavygreen, mCi+3pt+heavygreen);
 	limits((0, 0), (2000, 2000));
 
 	//AttachLegend();

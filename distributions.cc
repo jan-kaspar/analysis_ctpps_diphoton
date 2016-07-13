@@ -3,6 +3,7 @@
 #include "TFile.h"
 #include "TH1D.h"
 #include "TGraph.h"
+#include "TGraphErrors.h"
 
 #include "DataFormats/FWLite/interface/Handle.h"
 #include "DataFormats/FWLite/interface/ChainEvent.h"
@@ -131,7 +132,7 @@ int main()
 	TH1D *h_xi_R = new TH1D("h_xi_R", ";#xi_{R}", 25, 0., 0.25);
 	TH1D *h_m = new TH1D("h_m", ";mass	 (GeV)", 20, 0., 2000.);
 
-	TGraph *g_m_RP_vs_m_CMS = new TGraph(); g_m_RP_vs_m_CMS->SetName("g_m_RP_vs_m_CMS"); g_m_RP_vs_m_CMS->SetTitle(";m_{CMS};m_{RP}");
+	TGraphErrors *g_m_RP_vs_m_CMS = new TGraphErrors(); g_m_RP_vs_m_CMS->SetName("g_m_RP_vs_m_CMS"); g_m_RP_vs_m_CMS->SetTitle(";m_{CMS};m_{RP}");
 
 	// init counters
 	unsigned int N=0;
@@ -255,8 +256,16 @@ int main()
 			double xi_L_1_F = x_L_1_F*1E-3 / D_L_1_F;
 			double xi_R_1_F = x_R_1_F*1E-3 / D_R_1_F;
 
+			double de_x = 0.2E-3;	// m
+			double de_rel_D = 0.1;	// 1
+
+			double xi_L_1_F_unc = sqrt( pow(de_x / D_L_1_F, 2.) + pow(de_rel_D * xi_L_1_F, 2.) );
+			double xi_R_1_F_unc = sqrt( pow(de_x / D_R_1_F, 2.) + pow(de_rel_D * xi_R_1_F, 2.) );
+
 			double W = 13000.;	// sqrt(s) in GeV
 			double m = W * sqrt(xi_L_1_F * xi_R_1_F);
+
+			double m_unc = m / 2. * sqrt( pow(xi_L_1_F_unc / xi_L_1_F, 2.) + pow(xi_R_1_F_unc / xi_R_1_F, 2.) );
 
 			h_xi_L->Fill(xi_L_1_F);
 			h_xi_R->Fill(xi_R_1_F);
@@ -268,7 +277,9 @@ int main()
 				const auto &ei = it->second;
 
 				int idx = g_m_RP_vs_m_CMS->GetN();
+
 				g_m_RP_vs_m_CMS->SetPoint(idx, ei.dp_mass, m);
+				g_m_RP_vs_m_CMS->SetPointError(idx, 0., m_unc);
 			}
 		}
 	}
