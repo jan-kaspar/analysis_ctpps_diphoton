@@ -3,7 +3,7 @@ import pad_layout;
 
 string topDir = "../../";
 
-string datasets[] = { "EE", "EB", "EB2" };
+string datasets[] = { "EE", "EB" };
 
 xSizeDef = 10cm;
 ySizeDef = 8cm;
