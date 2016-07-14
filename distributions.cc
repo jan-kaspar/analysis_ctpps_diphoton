@@ -85,10 +85,12 @@ void LoadEventInfo(const string &fn)
 
 	fclose(f);
 
+	/*
 	for (auto &p : eventInfo)
 	{
 		printf("%u:%lu => %u, %.1f\n", p.first.run, p.first.event, p.second.lumisection, p.second.dp_mass);
 	}
+	*/
 }
 
 //----------------------------------------------------------------------------------------------------
@@ -125,12 +127,13 @@ int main()
 	TFile *f_out = new TFile("distributions.root", "recreate");
 
 	// book histograms
-	TH1D *h_dp_mass = new TH1D("h_dp_mass", ";diphoton mass", 20, 500., 1200.);
-	TH1D *h_dp_mass_tr_both_arms = new TH1D("h_dp_mass_tr_both_arms", ";diphoton mass", 20, 500., 1200.);
+	TH1D *h_dp_mass = new TH1D("h_dp_mass", ";diphoton mass", 20, 500., 2000.);
+	TH1D *h_dp_mass_tr_both_arms = new TH1D("h_dp_mass_tr_both_arms", ";diphoton mass", 20, 500., 2000.);
 
 	TH1D *h_xi_L = new TH1D("h_xi_L", ";#xi_{L}", 25, 0., 0.25);
 	TH1D *h_xi_R = new TH1D("h_xi_R", ";#xi_{R}", 25, 0., 0.25);
 	TH1D *h_m = new TH1D("h_m", ";mass	 (GeV)", 20, 0., 2000.);
+	TH1D *h_y = new TH1D("h_y", ";rapidity", 20, -0.5, 1.0);
 
 	TGraphErrors *g_m_RP_vs_m_CMS = new TGraphErrors(); g_m_RP_vs_m_CMS->SetName("g_m_RP_vs_m_CMS"); g_m_RP_vs_m_CMS->SetTitle(";m_{CMS};m_{RP}");
 
@@ -263,14 +266,18 @@ int main()
 			double xi_R_1_F_unc = sqrt( pow(de_x / D_R_1_F, 2.) + pow(de_rel_D * xi_R_1_F, 2.) );
 
 			double W = 13000.;	// sqrt(s) in GeV
-			double m = W * sqrt(xi_L_1_F * xi_R_1_F);
 
+			double m = W * sqrt(xi_L_1_F * xi_R_1_F);
 			double m_unc = m / 2. * sqrt( pow(xi_L_1_F_unc / xi_L_1_F, 2.) + pow(xi_R_1_F_unc / xi_R_1_F, 2.) );
+
+			double y = 1./2. * log(xi_R_1_F / xi_L_1_F);
+			double y_unc = 1. / 2. * sqrt( pow(xi_L_1_F_unc / xi_L_1_F, 2.) + pow(xi_R_1_F_unc / xi_R_1_F, 2.) );
 
 			h_xi_L->Fill(xi_L_1_F);
 			h_xi_R->Fill(xi_R_1_F);
 
 			h_m->Fill(m);
+			h_y->Fill(y);
 		
 			if (it != eventInfo.end())
 			{
@@ -280,6 +287,11 @@ int main()
 
 				g_m_RP_vs_m_CMS->SetPoint(idx, ei.dp_mass, m);
 				g_m_RP_vs_m_CMS->SetPointError(idx, 0., m_unc);
+
+				printf("correlation: run %u, event %llu, di-photon mass = %.3f, RP mass = %.3f +- %.3f, RP y = %.3f +- %.3f\n",
+					event.id().run(), event.id().event(), ei.dp_mass, m, m_unc, y, y_unc);
+			} else {
+				printf("WARNING: no event info for run:event = %u:%llu\n", event.id().run(), event.id().event());
 			}
 		}
 	}
@@ -315,6 +327,7 @@ int main()
 	h_xi_L->Write();
 	h_xi_R->Write();
 	h_m->Write();
+	h_y->Write();
 
 	g_m_RP_vs_m_CMS->Write();
 
