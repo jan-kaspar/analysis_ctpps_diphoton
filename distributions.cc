@@ -1,5 +1,3 @@
-#include "input_files.h"
-
 #include "TFile.h"
 #include "TH1D.h"
 #include "TGraph.h"
@@ -18,11 +16,18 @@
 
 #include <vector>
 #include <string>
+#include <map>
 
 //----------------------------------------------------------------------------------------------------
 
 using namespace std;
 using namespace edm;
+
+#include "input_files.h"
+
+#include "common.h"
+#include "alignment.h"
+#include "reconstruction.h"
 
 //----------------------------------------------------------------------------------------------------
 
@@ -92,22 +97,6 @@ void LoadEventInfo(const string &fn)
 	}
 	*/
 }
-
-//----------------------------------------------------------------------------------------------------
-
-struct TrackData
-{
-	bool valid = false;
-	double x = 0.;
-	double y = 0.;
-
-	void operator= (const TotemRPLocalTrack &ft)
-	{
-		valid = ft.isValid();
-		x = ft.getX0();
-		y = ft.getY0();
-	}
-};
 
 //----------------------------------------------------------------------------------------------------
 //----------------------------------------------------------------------------------------------------
@@ -207,74 +196,48 @@ int main()
 		}
 
 		// get track data for horizontal RPs
-		TrackData tr_L_1_F;
-		TrackData tr_L_1_N;
-		TrackData tr_R_1_N;
-		TrackData tr_R_1_F;
-
+		map<unsigned int, TrackData> trackData;
 		for (const auto &ds : *tracks)
 		{
 			const auto &rpId = ds.detId();
-
 			for (const auto &t : ds)
 			{
-				if (rpId == 3)
-					tr_L_1_F = t;
-				if (rpId == 2)
-					tr_L_1_N = t;
-				if (rpId == 102)
-					tr_R_1_N = t;
-				if (rpId == 103)
-					tr_R_1_F = t;
+				if (rpId == 3 || rpId == 2 || rpId == 102 || rpId == 103)
+					trackData[rpId] = t;
 			}
 		}
 
-		// alignment corrections
-		double de_x_L_1_F, de_x_L_1_N, de_x_R_1_N, de_x_R_1_F;	// in mm
-		if (event.id().run() < 274244)
+		// apply alignment corrections
+		ApplyAlignment(event.id().run(), trackData);
+
+		// split track collection per arm
+		map<unsigned int, TrackData> trackData_L, trackData_R;
+		for (const auto &p : trackData)
 		{
-			de_x_L_1_F = -3.40;
-			de_x_L_1_N = -0.90;
-			de_x_R_1_N = -2.75;
-			de_x_R_1_F = -2.40;
-		} else {
-			de_x_L_1_F = -3.90;
-			de_x_L_1_N = -1.45;
-			de_x_R_1_N = -3.25;
-			de_x_R_1_F = -2.85;
+			int arm = p.first / 100;
+			if (arm == 0)
+				trackData_L[p.first] = p.second;
+			if (arm == 1)
+				trackData_R[p.first] = p.second;
 		}
 
-		// optics
-		double D_L_1_F = 9.22E-02;	// in m
-		double D_L_1_N = 9.26E-02;
-		double D_R_1_N = 5.81E-02;
-		double D_R_1_F = 5.16E-02;
+		// run recontruction in each arm
+		ProtonData proton_L = ReconstructProton(trackData_L, true);
+		ProtonData proton_R = ReconstructProton(trackData_R, false);
 
-		// simple proton reconstruction
-		if (tr_L_1_F.valid && tr_R_1_F.valid)
+		// mass calculation etc.
+		if (proton_L.valid && proton_R.valid)
 		{
-			double x_L_1_F = tr_L_1_F.x + de_x_L_1_F;
-			double x_R_1_F = tr_R_1_F.x + de_x_R_1_F;
-
-			double xi_L_1_F = x_L_1_F*1E-3 / D_L_1_F;
-			double xi_R_1_F = x_R_1_F*1E-3 / D_R_1_F;
-
-			double de_x = 0.2E-3;	// m
-			double de_rel_D = 0.1;	// 1
-
-			double xi_L_1_F_unc = sqrt( pow(de_x / D_L_1_F, 2.) + pow(de_rel_D * xi_L_1_F, 2.) );
-			double xi_R_1_F_unc = sqrt( pow(de_x / D_R_1_F, 2.) + pow(de_rel_D * xi_R_1_F, 2.) );
-
 			double W = 13000.;	// sqrt(s) in GeV
 
-			double m = W * sqrt(xi_L_1_F * xi_R_1_F);
-			double m_unc = m / 2. * sqrt( pow(xi_L_1_F_unc / xi_L_1_F, 2.) + pow(xi_R_1_F_unc / xi_R_1_F, 2.) );
+			double m = W * sqrt(proton_L.xi * proton_R.xi);
+			double m_unc = m / 2. * sqrt( pow(proton_L.xi_unc / proton_L.xi, 2.) + pow(proton_R.xi_unc / proton_R.xi, 2.) );
 
-			double y = 1./2. * log(xi_R_1_F / xi_L_1_F);
-			double y_unc = 1. / 2. * sqrt( pow(xi_L_1_F_unc / xi_L_1_F, 2.) + pow(xi_R_1_F_unc / xi_R_1_F, 2.) );
+			double y = 1./2. * log(proton_R.xi / proton_L.xi);
+			double y_unc = 1. / 2. * sqrt( pow(proton_L.xi_unc / proton_L.xi, 2.) + pow(proton_R.xi_unc / proton_R.xi, 2.) );
 
-			h_xi_L->Fill(xi_L_1_F);
-			h_xi_R->Fill(xi_R_1_F);
+			h_xi_L->Fill(proton_L.xi);
+			h_xi_R->Fill(proton_R.xi);
 
 			h_m->Fill(m);
 			h_y->Fill(y);
