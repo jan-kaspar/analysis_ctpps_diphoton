@@ -68,8 +68,26 @@ for (string dataset : datasets)
 	
 	NewPad("$m_{\rm CMS}\ung{GeV}$", "$m_{\rm RP}\ung{GeV}$");
 	draw((0, 0)--(2000, 2000), dotted);
-	draw(RootGetObject(f, "g_m_RP_vs_m_CMS"), "p", heavygreen, mCi+4pt+heavygreen);
+	RootObject g_mass = RootGetObject(f, "g_m_RP_vs_m_CMS");
+	draw(g_mass, "p", heavygreen, mCi+3pt+heavygreen);
 	limits((0, 0), (2000, 2000));
+	
+	RootObject g_cand = RootGetObject(f, "g_candidate_vs_run");
+
+	int N = robj.iExec("GetN");
+	for (int i = 0; i < N; ++i)
+	{
+		real ax[] = {0.};
+		real ay[] = {0.};
+
+		g_mass.vExec("GetPoint", i, ax, ay);
+		real x = ax[0], y = ay[0];
+
+		g_cand.vExec("GetPoint", i, ax, ay);
+		int run = (int) ax[0], candIdx = (int) ay[0];
+		
+		label(format("%i", run) + format(":%i", candIdx), (x, y), E, heavygreen);
+	}
 
 	//AttachLegend();
 }

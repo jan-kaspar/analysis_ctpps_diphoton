@@ -1,3 +1,28 @@
+void ReconstructFromOneRP(const map<unsigned int, TrackData> &tracks, unsigned int id, double D, ProtonData &result)
+{
+	result.valid = false;
+
+	auto it = tracks.find(id);
+	if (it == tracks.end())
+		return;
+	
+	const auto &tr = it->second;
+
+	if (!tr.valid)
+		return;
+
+	result.valid = true;
+
+	result.xi = tr.x*1E-3 / D;
+
+	double de_x = 0.2E-3;	// m
+	double de_rel_D = 0.1;	// 1
+
+	result.xi_unc = sqrt( pow(de_x / D, 2.) + pow(de_rel_D * result.xi, 2.) );
+}
+
+//----------------------------------------------------------------------------------------------------
+
 ProtonData ReconstructProton(const map<unsigned int, TrackData> &tracks, bool leftArm)
 {
 	ProtonData result;
@@ -21,23 +46,12 @@ ProtonData ReconstructProton(const map<unsigned int, TrackData> &tracks, bool le
 		id_1_F = 103;
 	}
 
-	auto it = tracks.find(id_1_F);
-	if (it == tracks.end())
-		return result;
+	// try far
+	ReconstructFromOneRP(tracks, id_1_F, D_1_F, result);
 
-	const auto &tr = it->second;
-
-	if (tr.valid == false)
-		return result;
-
-	result.valid = true;
-
-	result.xi = tr.x*1E-3 / D_1_F;
-
-	double de_x = 0.2E-3;	// m
-	double de_rel_D = 0.1;	// 1
-
-	result.xi_unc = sqrt( pow(de_x / D_1_F, 2.) + pow(de_rel_D * result.xi, 2.) );
+	// if far not successfull, try near
+	if (!result.valid)
+		ReconstructFromOneRP(tracks, id_1_N, D_1_N, result);
 
 	return result;
 }

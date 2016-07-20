@@ -126,6 +126,8 @@ int main()
 
 	TGraphErrors *g_m_RP_vs_m_CMS = new TGraphErrors(); g_m_RP_vs_m_CMS->SetName("g_m_RP_vs_m_CMS"); g_m_RP_vs_m_CMS->SetTitle(";m_{CMS};m_{RP}");
 
+	TGraph *g_candidate_vs_run = new TGraph(); g_candidate_vs_run->SetName("g_candidate_vs_run"); g_candidate_vs_run->SetTitle(";run;candidate idx");
+
 	// init counters
 	unsigned int N=0;
 	unsigned int N_L_any=0, N_L_one=0, N_L_two=0;
@@ -136,6 +138,8 @@ int main()
 	printf("run, event, 45-F, 45-N, 56-N, 56-F\n");
 
 	// loop over the chain entries
+	map<unsigned int, unsigned int> candidatesPerRun;
+
 	for (event.toBegin(); ! event.atEnd(); ++event)
 	{
 		fwlite::Handle< DetSetVector<TotemRPLocalTrack> > tracks;
@@ -196,23 +200,23 @@ int main()
 		}
 
 		// get track data for horizontal RPs
-		map<unsigned int, TrackData> trackData;
+		map<unsigned int, TrackData> trackData_raw;
 		for (const auto &ds : *tracks)
 		{
 			const auto &rpId = ds.detId();
 			for (const auto &t : ds)
 			{
 				if (rpId == 3 || rpId == 2 || rpId == 102 || rpId == 103)
-					trackData[rpId] = t;
+					trackData_raw[rpId] = t;
 			}
 		}
 
 		// apply alignment corrections
-		ApplyAlignment(event.id().run(), trackData);
+		map<unsigned int, TrackData> trackData_al = ApplyAlignment(event.id().run(), trackData_raw);
 
 		// split track collection per arm
 		map<unsigned int, TrackData> trackData_L, trackData_R;
-		for (const auto &p : trackData)
+		for (const auto &p : trackData_al)
 		{
 			int arm = p.first / 100;
 			if (arm == 0)
@@ -241,6 +245,10 @@ int main()
 
 			h_m->Fill(m);
 			h_y->Fill(y);
+
+			auto cit = candidatesPerRun.find(event.id().run());
+			if (cit == candidatesPerRun.end())
+				cit = candidatesPerRun.insert({event.id().run(), 0}).first;
 		
 			if (it != eventInfo.end())
 			{
@@ -250,6 +258,9 @@ int main()
 
 				g_m_RP_vs_m_CMS->SetPoint(idx, ei.dp_mass, m);
 				g_m_RP_vs_m_CMS->SetPointError(idx, 0., m_unc);
+
+				g_candidate_vs_run->SetPoint(idx, event.id().run(), cit->second);
+				cit->second++;
 
 				printf("correlation: run %u, event %llu, di-photon mass = %.3f, RP mass = %.3f +- %.3f, RP y = %.3f +- %.3f\n",
 					event.id().run(), event.id().event(), ei.dp_mass, m, m_unc, y, y_unc);
@@ -293,6 +304,7 @@ int main()
 	h_y->Write();
 
 	g_m_RP_vs_m_CMS->Write();
+	g_candidate_vs_run->Write();
 
 	// clean up
 	delete f_out;
