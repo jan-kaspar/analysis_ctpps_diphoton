@@ -2,6 +2,7 @@
 #include "TH1D.h"
 #include "TGraph.h"
 #include "TGraphErrors.h"
+#include "TSpline.h"
 
 #include "DataFormats/FWLite/interface/Handle.h"
 #include "DataFormats/FWLite/interface/ChainEvent.h"
