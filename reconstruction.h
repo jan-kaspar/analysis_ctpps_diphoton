@@ -1,3 +1,9 @@
+void InitReconstruction()
+{
+}
+
+//----------------------------------------------------------------------------------------------------
+
 void ReconstructFromOneRP(const map<unsigned int, TrackData> &tracks, unsigned int id, double D, ProtonData &result)
 {
 	result.valid = false;

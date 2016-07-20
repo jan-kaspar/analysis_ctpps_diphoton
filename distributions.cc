@@ -111,6 +111,9 @@ int main()
 
 	InitInputFiles();
 	fwlite::ChainEvent event(input_files);
+	
+	InitAlignment();
+	InitReconstruction();
 
 	// prepare ouput
 	TFile *f_out = new TFile("distributions.root", "recreate");

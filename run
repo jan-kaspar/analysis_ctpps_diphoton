@@ -8,7 +8,7 @@ function PrintUsage()
 	echo -e "OPTIONS"
 
 	echo -e "	-h, --help		print this help and exit"
-	echo -e "	-no-run, -dno		do not run the program for any diagonal, just compile"
+	echo -e "	-no-run			do not run the program for any diagonal, just compile"
 	echo -e "	-O <option>		pass the option to the program"
 	echo -e "	-no-bckg		do no run compilation and programs in background"
 }

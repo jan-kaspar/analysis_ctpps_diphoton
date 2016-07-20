@@ -1,3 +1,9 @@
+void InitAlignment()
+{
+}
+
+//----------------------------------------------------------------------------------------------------
+
 map<unsigned int, TrackData> ApplyAlignment(unsigned int run, const map<unsigned int, TrackData> &input)
 {
 	map<unsigned int, TrackData> output = input;
@@ -17,5 +23,3 @@ map<unsigned int, TrackData> ApplyAlignment(unsigned int run, const map<unsigned
 
 	return output;
 }
-
-//----------------------------------------------------------------------------------------------------
