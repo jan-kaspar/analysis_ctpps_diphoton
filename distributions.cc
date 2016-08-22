@@ -62,7 +62,9 @@ struct EventKey
 struct EventInfo
 {
 	unsigned int lumisection;
+
 	double dp_mass;
+	double dp_y;
 };
 
 map<EventKey, EventInfo> eventInfo;
@@ -77,8 +79,12 @@ void LoadEventInfo(const string &fn)
 	{
 		EventKey k;
 		EventInfo i;
+		// TODO
+		//int ir = fscanf(f, "%u:%u:%lu %lf %lf", &k.run, &i.lumisection, &k.event, &i.dp_mass, &i.dp_y);
 		int ir = fscanf(f, "%u:%u:%lu %lf", &k.run, &i.lumisection, &k.event, &i.dp_mass);
 
+		// TODO
+		//if (ir == 5)
 		if (ir == 4)
 			eventInfo[k] = i;
 
@@ -92,10 +98,12 @@ void LoadEventInfo(const string &fn)
 	fclose(f);
 
 	/*
+	printf("<<<\n");
 	for (auto &p : eventInfo)
 	{
-		printf("%u:%lu => %u, %.1f\n", p.first.run, p.first.event, p.second.lumisection, p.second.dp_mass);
+		printf("%u:%lu => %u, %.1f, %.2f\n", p.first.run, p.first.event, p.second.lumisection, p.second.dp_mass, p.second.dp_y);
 	}
+	printf(">>>\n");
 	*/
 }
 
@@ -127,10 +135,14 @@ int main()
 	TH1D *h_xi_R = new TH1D("h_xi_R", ";#xi_{R}", 25, 0., 0.25);
 	TH1D *h_m = new TH1D("h_m", ";mass	 (GeV)", 20, 0., 2000.);
 	TH1D *h_y = new TH1D("h_y", ";rapidity", 20, -0.5, 1.0);
+	
+	TGraph *g_event_vs_run = new TGraph(); g_event_vs_run->SetName("g_event_vs_run"); g_event_vs_run->SetTitle(";run;candidate idx");
 
+	TH1D *h_m_diff_RP_CMS = new TH1D("h_m_diff_RP_CMS", ";m_{RP} - m_{CMS}", 50, -1000., +1000.);
 	TGraphErrors *g_m_RP_vs_m_CMS = new TGraphErrors(); g_m_RP_vs_m_CMS->SetName("g_m_RP_vs_m_CMS"); g_m_RP_vs_m_CMS->SetTitle(";m_{CMS};m_{RP}");
 
-	TGraph *g_candidate_vs_run = new TGraph(); g_candidate_vs_run->SetName("g_candidate_vs_run"); g_candidate_vs_run->SetTitle(";run;candidate idx");
+	TH1D *h_y_diff_RP_CMS = new TH1D("h_y_diff_RP_CMS", ";y_{RP} - y_{CMS}", 50, -5., +5.);
+	TGraphErrors *g_y_RP_vs_y_CMS = new TGraphErrors(); g_y_RP_vs_y_CMS->SetName("g_y_RP_vs_y_CMS"); g_y_RP_vs_y_CMS->SetTitle(";y_{CMS};y_{RP}");
 
 	// init counters
 	unsigned int N=0;
@@ -142,8 +154,6 @@ int main()
 	printf("run, event, 45-F, 45-N, 56-N, 56-F\n");
 
 	// loop over the chain entries
-	map<unsigned int, unsigned int> candidatesPerRun;
-
 	for (event.toBegin(); ! event.atEnd(); ++event)
 	{
 		fwlite::Handle< DetSetVector<TotemRPLocalTrack> > tracks;
@@ -201,6 +211,8 @@ int main()
 
 			if (track_both_arms)
 				h_dp_mass_tr_both_arms->Fill(ei.dp_mass);
+		} else {
+			printf("WARNING: no event info for run:event = %u:%llu\n", event.id().run(), event.id().event());
 		}
 
 		// get track data for horizontal RPs
@@ -250,26 +262,26 @@ int main()
 			h_m->Fill(m);
 			h_y->Fill(y);
 
-			auto cit = candidatesPerRun.find(event.id().run());
-			if (cit == candidatesPerRun.end())
-				cit = candidatesPerRun.insert({event.id().run(), 0}).first;
-		
 			if (it != eventInfo.end())
 			{
 				const auto &ei = it->second;
 
-				int idx = g_m_RP_vs_m_CMS->GetN();
+				int idx = g_event_vs_run->GetN();
+				
+				g_event_vs_run->SetPoint(idx, event.id().run(), event.id().event());
 
 				g_m_RP_vs_m_CMS->SetPoint(idx, ei.dp_mass, m);
 				g_m_RP_vs_m_CMS->SetPointError(idx, 0., m_unc);
 
-				g_candidate_vs_run->SetPoint(idx, event.id().run(), cit->second);
-				cit->second++;
+				h_m_diff_RP_CMS->Fill(m - ei.dp_mass);
+
+				g_y_RP_vs_y_CMS->SetPoint(idx, ei.dp_y, y);
+				g_y_RP_vs_y_CMS->SetPointError(idx, 0., y_unc);
+
+				h_y_diff_RP_CMS->Fill(y - ei.dp_y);
 
 				printf("correlation: run %u, event %llu, di-photon mass = %.3f, RP mass = %.3f +- %.3f, RP y = %.3f +- %.3f\n",
 					event.id().run(), event.id().event(), ei.dp_mass, m, m_unc, y, y_unc);
-			} else {
-				printf("WARNING: no event info for run:event = %u:%llu\n", event.id().run(), event.id().event());
 			}
 		}
 	}
@@ -307,8 +319,13 @@ int main()
 	h_m->Write();
 	h_y->Write();
 
+	g_event_vs_run->Write();
+
+	h_m_diff_RP_CMS->Write();
 	g_m_RP_vs_m_CMS->Write();
-	g_candidate_vs_run->Write();
+
+	h_y_diff_RP_CMS->Write();
+	g_y_RP_vs_y_CMS->Write();
 
 	// clean up
 	delete f_out;
