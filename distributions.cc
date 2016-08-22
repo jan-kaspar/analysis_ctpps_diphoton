@@ -26,9 +26,10 @@ using namespace edm;
 
 #include "input_files.h"
 
-#include "common.h"
-#include "alignment.h"
-#include "reconstruction.h"
+#include "shared_track.h"
+#include "shared_alignment.h"
+#include "shared_reconstruction.h"
+#include "shared_fill_info.h"
 
 //----------------------------------------------------------------------------------------------------
 
@@ -121,8 +122,15 @@ int main()
 	InitInputFiles();
 	fwlite::ChainEvent event(input_files);
 	
-	InitAlignment();
 	InitReconstruction();
+	InitFillInfoCollection();
+
+	AlignmentResultsCollection alignment;
+	if (alignment.Load("../alignment/alignment_collection.out") != 0)
+	{
+		printf("ERROR: can't load alignment data.\n");
+		return 10;
+	}
 
 	// prepare ouput
 	TFile *f_out = new TFile("distributions.root", "recreate");
@@ -216,7 +224,7 @@ int main()
 		}
 
 		// get track data for horizontal RPs
-		map<unsigned int, TrackData> trackData_raw;
+		TrackDataCollection trackData_raw;
 		for (const auto &ds : *tracks)
 		{
 			const auto &rpId = ds.detId();
@@ -228,10 +236,17 @@ int main()
 		}
 
 		// apply alignment corrections
-		map<unsigned int, TrackData> trackData_al = ApplyAlignment(event.id().run(), trackData_raw);
+		const auto &fillInfo = fillInfoCollection.FindByRun(event.id().run());
+		const auto alignment_it = alignment.find(fillInfo.alignmentTag);
+		if (alignment_it == alignment.end())
+		{
+			printf("ERROR: no alignment for tag '%s'.\n", fillInfo.alignmentTag.c_str());
+			return 1;
+		}
+		TrackDataCollection trackData_al = alignment_it->second.Apply(trackData_raw);
 
 		// split track collection per arm
-		map<unsigned int, TrackData> trackData_L, trackData_R;
+		TrackDataCollection trackData_L, trackData_R;
 		for (const auto &p : trackData_al)
 		{
 			int arm = p.first / 100;
