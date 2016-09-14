@@ -60,12 +60,14 @@ struct EventKey
 	}
 };
 
+//----------------------------------------------------------------------------------------------------
+
 struct EventInfo
 {
-	unsigned int lumisection;
+	unsigned int lumisection = 0;
 
-	double dp_mass;
-	double dp_y;
+	double dp_mass = 0.;
+	double dp_y = 0.;
 };
 
 map<EventKey, EventInfo> eventInfo;
@@ -81,12 +83,12 @@ void LoadEventInfo(const string &fn)
 		EventKey k;
 		EventInfo i;
 		// TODO
-		//int ir = fscanf(f, "%u:%u:%lu %lf %lf", &k.run, &i.lumisection, &k.event, &i.dp_mass, &i.dp_y);
-		int ir = fscanf(f, "%u:%u:%lu %lf", &k.run, &i.lumisection, &k.event, &i.dp_mass);
+		int ir = fscanf(f, "%u:%u:%lu %lf %lf", &k.run, &i.lumisection, &k.event, &i.dp_mass, &i.dp_y);
+		//int ir = fscanf(f, "%u:%u:%lu %lf", &k.run, &i.lumisection, &k.event, &i.dp_mass);
 
 		// TODO
-		//if (ir == 5)
-		if (ir == 4)
+		if (ir == 5)
+		//if (ir == 4)
 			eventInfo[k] = i;
 
 		if (ir == 0)
@@ -295,8 +297,10 @@ int main()
 
 				h_y_diff_RP_CMS->Fill(y - ei.dp_y);
 
-				printf("correlation: run %u, event %llu, di-photon mass = %.3f, RP mass = %.3f +- %.3f, RP y = %.3f +- %.3f\n",
-					event.id().run(), event.id().event(), ei.dp_mass, m, m_unc, y, y_unc);
+				printf("CORRELATION: run %u, event %llu\n", event.id().run(), event.id().event());
+				printf("\tdi-photon: mass = %.3f, y = %.3f\n", ei.dp_mass, ei.dp_y);
+				printf("\tRP: xi_L = %.3f +- %.3f, xi_R = %.3f +- %.3f, mass = %.3f +- %.3f, RP y = %.3f +- %.3f\n",
+					proton_L.xi, proton_L.xi_unc, proton_R.xi, proton_R.xi_unc, m, m_unc, y, y_unc);
 			}
 		}
 	}

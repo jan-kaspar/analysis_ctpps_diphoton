@@ -58,8 +58,8 @@ void ReconstructFromOneRP(const map<unsigned int, TrackData> &tracks, unsigned i
 
 	result.xi = s_x_to_xi->Eval(tr.x*1E-3);	// expects x in m
 
-	double de_x = 0.4E-3;	// m
-	double de_rel_D = 0.1;	// 1
+	double de_x = 0.150E-3;	// m
+	double de_rel_D = 0.15;	// 1
 
 	double de_xi = s_x_to_xi->Eval(tr.x*1E-3 + de_x) - result.xi;
 
